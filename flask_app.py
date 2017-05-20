@@ -26,12 +26,15 @@ demands = db.Table('demands',
 )
 
 
-'''class Pending(db.Model):
-    __tablename__ = 'pendings'
+class Message(db.Model):
+    __tablename__ = 'messages'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    offer_id = db.Column(db.Integer, db.ForeignKey("offer.id"), nullable=False)
-'''
+    type  = db.Column(db.String(4))
+    text = db.Column(db.String(1024))
+    date = db.Column(db.String(16))
+    time  = db.Column(db.String(512))
+    user_id_message = db.Column(db.Integer, db.ForeignKey('users.id'))
+
 
 class Offer(db.Model):
     __tablename__ = 'offers'
@@ -94,6 +97,7 @@ class User(db.Model):
     imagen = db.Column(db.String(2048))
     offers_pendientes = db.relationship('Offer', backref='offer')
     offers_realizadas = db.relationship('Offer', backref='offer_r')
+    messages = db.relationship('Message', backref='message')
     demanded = db.relationship('Offer',
                             secondary=demands,
                             primaryjoin=(demands.c.user_id == id),
@@ -138,7 +142,7 @@ class User(db.Model):
 ################################################################################CREATE DATABASE
 db.create_all()
 
-
+##API based
 @auth.verify_password
 def verify_password(username_or_token, password):
     # first try to authenticate by token
@@ -148,6 +152,14 @@ def verify_password(username_or_token, password):
         user = User.query.filter_by(username=username_or_token).first()
         if not user or not user.verify_password(password):
            return False
+    g.user = user
+    return True
+
+def verify_token(token):
+    # first try to authenticate by token
+    user = User.verify_auth_token(token)
+    if not user:
+        return False
     g.user = user
     return True
 
@@ -166,7 +178,6 @@ def new_user():
     return (jsonify({'username': user.username}), 201,
             {'Location': url_for('get_user', id=user.id, _external=True)})
 
-
 @app.route('/api/users/<int:id>')
 def get_user(id):
     user = User.query.get(id)
@@ -178,8 +189,7 @@ def get_user(id):
 @auth.login_required
 def get_auth_token():
     token = g.user.generate_auth_token(600)
-    return jsonify({'token': token.decode('ascii'), 'duration': 600})
-
+    return jsonify({'token': token.decode('ascii')})
 
 @app.route('/api/resource')
 @auth.login_required
@@ -199,39 +209,6 @@ def home():
 #Create un nuevo usuario
 @app.route('/users', methods=['POST'])
 def create_user():
-    """POST with conten_type json"""
-    '''username=request.json.get('username')
-    password=request.json.get('password')
-    nombre=request.json.get('nombre')
-    apellidos=request.json.get('apellidos')
-    dni=request.json.get('dni')
-    fecha=request.json.get('fecha')
-    mail=request.json.get('mail')
-    telefono=request.json.get('telefono')
-    cuenta=request.json.get('cuenta')
-    permisos=request.json.get('permisos')
-    vehiculo=request.json.get('vehiculo')
-    matricula=request.json.get('matricula')
-    marca=request.json.get('marca')
-    modelo=request.json.get('modelo')
-    tara=request.json.get('tara')
-    plataforma=request.json.get('plataforma')
-    carga=request.json.get('carga')
-    turnos=request.json.get('turnos')
-    dias=request.json.get('dias')
-    comunidad=request.json.get('comunidad')
-    provincia=request.json.get('provincia')
-    municipio=request.json.get('municipio')
-    tipoVia=request.json.get('tipoVia')
-    nombreVia=request.json.get('nombreVia')
-    numero=request.json.get('numero')
-    escalera=request.json.get('escalera')
-    piso=request.json.get('piso')
-    puerta=request.json.get('puerta')
-    codigoPostal=request.json.get('codigoPostal')
-    disponibilidadGeo=request.json.get('disponibilidadGeo')
-    imagen= request.json.get('imagen')'''
-
     """Witf form"""
     username=request.form['username']
     password=request.form['password']
@@ -296,7 +273,6 @@ def create_user():
         abort(400)    # missing arguments
     if codigoPostal is None or disponibilidadGeo is None:
         abort(400)    # missing arguments
-
     user = User(username=username,
                 nombre=nombre,
                 apellidos=apellidos,
@@ -331,6 +307,7 @@ def create_user():
     db.session.add(user)
     db.session.commit()
     return (jsonify({'username': user.username}), 201)
+
 
 
 #info de todos los usuarios
@@ -378,59 +355,65 @@ def get_info_users():
     return resp
 
 
+
 #info de un usuario by
 @app.route('/users/<int:id>', methods=['GET'])
 def get_user_info(id):
-    user = User.query.get(id)
-    if not user:
-        abort(400)
-    d = collections.OrderedDict()
-    d['id'] = user.id
-    d['username'] = user.username
-    d['nombre'] = user.nombre
-    d['apellidos'] = user.apellidos
-    d['dni'] = user.dni
-    d['fecha'] = user.fecha
-    d['mail'] = user.mail
-    d['telefono'] = user.telefono
-    d['cuenta'] = user.cuenta
-    d['permisos'] = user.permisos
-    d['vehiculo'] = user.vehiculo
-    d['matricula'] = user.matricula
-    d['marca'] = user.marca
-    d['modelo'] = user.modelo
-    d['tara'] = user.tara
-    d['plataforma'] = user.plataforma
-    d['carga'] = user.carga
-    d['turnos'] = user.turnos
-    d['dias'] = user.dias
-    d['comunidad'] = user.comunidad
-    d['provincia'] = user.provincia
-    d['municipio'] = user.municipio
-    d['tipoVia'] = user.tipoVia
-    d['nombreVia'] = user.nombreVia
-    d['numero'] = user.numero
-    d['escalera'] = user.escalera
-    d['piso'] = user.piso
-    d['puerta'] = user.puerta
-    d['codigoPostal'] = user.codigoPostal
-    d['disponibilidadGeo'] = user.disponibilidadGeo
-    d['imagen'] = user.imagen
-    j = json.dumps(d)
-    resp = Response(j, status=200, mimetype='application/json')
-    resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
-    return resp
+    token = request.headers.get('token')
+    is_real = verify_password( token)
+    if is_real:
+        user = User.query.get(id)
+        if not user:
+            abort(400)
+        d = collections.OrderedDict()
+        d['id'] = user.id
+        d['username'] = user.username
+        d['nombre'] = user.nombre
+        d['apellidos'] = user.apellidos
+        d['dni'] = user.dni
+        d['fecha'] = user.fecha
+        d['mail'] = user.mail
+        d['telefono'] = user.telefono
+        d['cuenta'] = user.cuenta
+        d['permisos'] = user.permisos
+        d['vehiculo'] = user.vehiculo
+        d['matricula'] = user.matricula
+        d['marca'] = user.marca
+        d['modelo'] = user.modelo
+        d['tara'] = user.tara
+        d['plataforma'] = user.plataforma
+        d['carga'] = user.carga
+        d['turnos'] = user.turnos
+        d['dias'] = user.dias
+        d['comunidad'] = user.comunidad
+        d['provincia'] = user.provincia
+        d['municipio'] = user.municipio
+        d['tipoVia'] = user.tipoVia
+        d['nombreVia'] = user.nombreVia
+        d['numero'] = user.numero
+        d['escalera'] = user.escalera
+        d['piso'] = user.piso
+        d['puerta'] = user.puerta
+        d['codigoPostal'] = user.codigoPostal
+        d['disponibilidadGeo'] = user.disponibilidadGeo
+        d['imagen'] = user.imagen
+        j = json.dumps(d)
+        resp = Response(j, status=200, mimetype='application/json')
+        resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
+        return resp
+    return abort(400)
 
 
 
 #informa si existe el usuario en la bd
 @app.route('/users/validate', methods=['GET'])
 def validate_user():
-    user=request.args.get('username')
-    user = User.query.filter_by(username=user).first()
+    username=request.args.get('username')
+    mail=request.args.get('mail')
+    user = User.query.filter_by(username=username,mail=mail).first()
     if not user:
-        abort(400)
-    return (jsonify({'username': user.username}), 200)
+        (jsonify({'noexist': 'True'}), 200)
+    return (jsonify({'noexist': 'False'}), 200)
 
 
 
@@ -441,7 +424,7 @@ def update_user(id):
     if not user:
         abort(400)
     user.username=request.form['username']
-    user.password=request.form['password']
+    password=request.form['password']
     user.nombre=request.form['nombre']
     user.apellidos=request.form['apellidos']
     user.dni=request.form['dni']
@@ -471,8 +454,12 @@ def update_user(id):
     user.codigoPostal=request.form['codigoPostal']
     user.disponibilidadGeo=request.form['disponibilidadGeo']
     user.imagen=request.form['imagen']
+    if not password:
+        user.hash_password(password)
     db.session.commit()
     return (jsonify({'username': user.username}), 200)
+
+
 
 #login del usuario
 @app.route('/login', methods=['POST'])
@@ -481,8 +468,9 @@ def login_get_auth_token():
     password=request.form['password']
     if verify_password(username, password):
         token = g.user.generate_auth_token(66600)
-        return jsonify({'token': token.decode('ascii'), 'duration': 66600})
+        return jsonify({'token': token.decode('ascii')})
     return abort(401)
+
 
 
 #Clear Database
@@ -495,7 +483,7 @@ def clear_db():
     return json.dumps({'success':True}), 200, {'ContentType':'application/json'}
 
 
-################################################################################Ofertas
+
 #crea una oferta
 @app.route('/ofertas', methods=['POST'])
 def create_oferta():
@@ -515,7 +503,6 @@ def create_oferta():
     telefono_recogida = request.form['telefono_recogida']
     telefono_entrega = request.form['telefono_entrega']
     encoded_imagen_empresa = request.form['encoded_imagen_empresa']
-
     if nombre_empresa is None or descripcion is None:
         abort(400)    # missing arguments
     if fecha is None or hora_recogida is None:
@@ -556,12 +543,14 @@ def create_oferta():
     return (jsonify({'oferta': oferta.nombre_empresa}), 201)
 
 
+
 @app.route('/ofertas', methods=['GET'])
 def get_ofertas():
     offers = Offer.query.all()
     rowarray_list = []
     for offer in offers:
         d = collections.OrderedDict()
+        d['id'] = offer.id
         d['nombre_empresa'] = offer.nombre_empresa
         d['descripcion'] = offer.descripcion
         d['fecha'] = offer.fecha
@@ -584,6 +573,8 @@ def get_ofertas():
     resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
     return resp
 
+
+
 #info de una oferta by id
 @app.route('/ofertas/<int:id>', methods=['GET'])
 def get_ofertas_id(id):
@@ -591,6 +582,7 @@ def get_ofertas_id(id):
     if not offer:
         abort(400)
     d = collections.OrderedDict()
+    d['id'] = offer.id
     d['nombre_empresa'] = offer.nombre_empresa
     d['descripcion'] = offer.descripcion
     d['fecha'] = offer.fecha
@@ -611,6 +603,7 @@ def get_ofertas_id(id):
     resp = Response(j, status=200, mimetype='application/json')
     resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
     return resp
+
 
 
 #Update la oferta by id
@@ -639,6 +632,7 @@ def upate_oferta_id(id):
     return (jsonify({'nombre_empresa': offer.nombre_empresa}), 200)
 
 
+
 #user solicita empleo con oferta id
 @app.route('/ofertas/<int:id>/solicitar', methods=['PUT'])
 def solicitar_oferta_id(id):
@@ -652,6 +646,8 @@ def solicitar_oferta_id(id):
     db.session.add(u)
     db.session.commit()
     return (jsonify({'user_id':user.id,'oferta_id':offer.id}), 200)
+
+
 
 #info o solo id, de todos los usuarios que quieran la oferta ofrecida
 @app.route('/ofertas/<int:id>/solicitar', methods=['GET'])
@@ -701,6 +697,7 @@ def solicitar_info_oferta_id(id):
     return resp
 
 
+
 #oferta asignada. asigna oferta(id) a user_id
 @app.route('/ofertas/<int:id>/pendientes', methods=['PUT'])
 def asignar_oferta(id):
@@ -716,6 +713,7 @@ def asignar_oferta(id):
     user.offers_pendientes.append(offer)
     db.session.commit()
     return (jsonify({'user_id':user.id,'oferta_id':offer.id}), 200)
+
 
 
 #oferta realizada. Marca como realizada una oferta(id) por un user_is
@@ -734,6 +732,8 @@ def finalizar_oferta(id):
     db.session.add(user)
     db.session.commit()
     return (jsonify({'user_id':user.id,'oferta_id':offer.id}), 200)
+
+
 
 #info de las ofertas/pedidos que ha realizado dado su id
 @app.route('/users/<int:id>/realizadas', methods=['GET'])
@@ -768,6 +768,8 @@ def get_user_realizadas(id):
     resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
     return resp
 
+
+
 #info de las ofertas/pedidos que  tiene pendientes dado su id
 @app.route('/users/<int:id>/pendientes', methods=['GET'])
 def get_user_pendientes(id):
@@ -795,6 +797,65 @@ def get_user_pendientes(id):
         d['telefono_recogida'] = offer.telefono_recogida
         d['telefono_entrega'] = offer.telefono_entrega
         d['encoded_imagen_empresa'] = offer.encoded_imagen_empresa
+        rowarray_list.append(d)
+    j = json.dumps(rowarray_list)
+    resp = Response(j, status=200, mimetype='application/json')
+    resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
+    return resp
+
+
+
+#Return user.id by token
+@app.route('/me', methods=['GET'])
+def get_user_me(id):
+    token = request.headers.get('token')
+    is_real = verify_password( token)
+    if is_real:
+        return (jsonify({'user_id':g.user.id}), 200)
+    return abort(400)
+
+
+
+#enviar mensaje a fuber
+@app.route('/users/<int:id>/mensajes', methods=['POST'])
+def mensaje_to_fuber(id):
+    user = User.query.get(id)
+    if not user:
+        abort(400)
+    type_ = request.form['type']
+    text_ = request.form['text']
+    date_ = request.form['date']
+    time_ = request.form['time']
+    message = Message(
+                    type=type_,
+                    text=text_,
+                    date=date_,
+                    time=time_,
+                    user_id_message=user.id)
+    db.session.add(message)
+    db.session.commit()
+    user.messages(message)
+    db.session.commit()
+    return (jsonify({'user_id':user.id}), 200)
+
+
+
+#info de todos los mensajes de fuber con usuario by id
+@app.route('/users/<int:id>/mensajes', methods=['GEt'])
+def get_mansajes_id(id):
+    user = User.query.get(id)
+    if not user:
+        abort(400)
+    messages = user.messages
+    rowarray_list = []
+    for mess in messages:
+        d = collections.OrderedDict()
+        d['id'] = mess.id
+        d['type'] = mess.type
+        d['text'] = mess.text
+        d['date'] = mess.date
+        d['time'] = mess.time
+        d['user_id_message'] = mess.user_id_message
         rowarray_list.append(d)
     j = json.dumps(rowarray_list)
     resp = Response(j, status=200, mimetype='application/json')
