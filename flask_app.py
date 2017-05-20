@@ -52,7 +52,9 @@ class Offer(db.Model):
     telefono_recogida = db.Column(db.String(16))
     telefono_entrega = db.Column(db.String(16))
     encoded_imagen_empresa = db.Column(db.String(2048))
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    asignada = db.Column(db.Boolean, default=False)
+    realizada = db.Column(db.Boolean, default=False)
+    user_id_asignado = db.Column(db.Integer, db.ForeignKey('users.id'))
 
 ################################################################################TABLE users
 ################################################################################USER MODEL
@@ -90,8 +92,8 @@ class User(db.Model):
     codigoPostal  = db.Column(db.String(8))
     disponibilidadGeo = db.Column(db.String(100))
     imagen = db.Column(db.String(2048))
-    offers_pendientes = db.relationship('Offer', backref='user')
-    offers_realizadas = db.relationship('Offer', backref='user')
+    offers_pendientes = db.relationship('Offer', backref='offer')
+    offers_realizadas = db.relationship('Offer', backref='offer_r')
     demanded = db.relationship('Offer',
                             secondary=demands,
                             primaryjoin=(demands.c.user_id == id),
@@ -651,7 +653,7 @@ def solicitar_oferta_id(id):
     db.session.commit()
     return (jsonify({'user_id':user.id,'oferta_id':offer.id}), 200)
 
-#info o solo id, de todos los usuariosque quieran la oferta ofrecida
+#info o solo id, de todos los usuarios que quieran la oferta ofrecida
 @app.route('/ofertas/<int:id>/solicitar', methods=['GET'])
 def solicitar_info_oferta_id(id):
     offer = Offer.query.get(id)
@@ -697,6 +699,108 @@ def solicitar_info_oferta_id(id):
     resp = Response(j, status=200, mimetype='application/json')
     resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
     return resp
+
+
+#oferta asignada. asigna oferta(id) a user_id
+@app.route('/ofertas/<int:id>/pendientes', methods=['PUT'])
+def asignar_oferta(id):
+    user = User.query.get(request.form['user_id'])
+    if not user:
+        abort(400)
+    offer = Offer.query.get(id)
+    if not offer:
+        abort(400)
+    offer.asignada = True
+    offer.user_id_asignado = user.id
+    db.session.commit()
+    user.offers_pendientes.append(offer)
+    db.session.commit()
+    return (jsonify({'user_id':user.id,'oferta_id':offer.id}), 200)
+
+
+#oferta realizada. Marca como realizada una oferta(id) por un user_is
+@app.route('/ofertas/<int:id>/realizadas', methods=['PUT'])
+def finalizar_oferta(id):
+    user = User.query.get(request.form['user_id'])
+    if not user:
+        abort(400)
+    offer = Offer.query.get(id)
+    if not offer:
+        abort(400)
+    offer.realizada = True
+    db.session.commit()
+    user.offers_realizadas.append(offer)
+    user.offers_pendientes.remove(offer)
+    db.session.add(user)
+    db.session.commit()
+    return (jsonify({'user_id':user.id,'oferta_id':offer.id}), 200)
+
+#info de las ofertas/pedidos que ha realizado dado su id
+@app.route('/users/<int:id>/realizadas', methods=['GET'])
+def get_user_realizadas(id):
+    user = User.query.get(id)
+    if not user:
+        abort(400)
+    offers = user.offers_realizadas
+    #print (offers)
+    rowarray_list = []
+    for offer in offers:
+        d = collections.OrderedDict()
+        d['nombre_empresa'] = offer.nombre_empresa
+        d['descripcion'] = offer.descripcion
+        d['fecha'] = offer.fecha
+        d['hora_recogida'] = offer.hora_recogida
+        d['hora_entrega'] = offer.hora_entrega
+        d['direccion_recogida'] = offer.direccion_recogida
+        d['direccion_entrega'] = offer.direccion_entrega
+        d['precio_hora'] = offer.precio_hora
+        d['tipo_vehiculo'] = offer.tipo_vehiculo
+        d['tipo_carga'] = offer.tipo_carga
+        d['permiso_conducir'] = offer.permiso_conducir
+        d['recorrido_km'] = offer.recorrido_km
+        d['metros'] = offer.metros
+        d['telefono_recogida'] = offer.telefono_recogida
+        d['telefono_entrega'] = offer.telefono_entrega
+        d['encoded_imagen_empresa'] = offer.encoded_imagen_empresa
+        rowarray_list.append(d)
+    j = json.dumps(rowarray_list)
+    resp = Response(j, status=200, mimetype='application/json')
+    resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
+    return resp
+
+#info de las ofertas/pedidos que  tiene pendientes dado su id
+@app.route('/users/<int:id>/pendientes', methods=['GET'])
+def get_user_pendientes(id):
+    user = User.query.get(id)
+    if not user:
+        abort(400)
+    offers = user.offers_pendientes
+    #print (offers)
+    rowarray_list = []
+    for offer in offers:
+        d = collections.OrderedDict()
+        d['nombre_empresa'] = offer.nombre_empresa
+        d['descripcion'] = offer.descripcion
+        d['fecha'] = offer.fecha
+        d['hora_recogida'] = offer.hora_recogida
+        d['hora_entrega'] = offer.hora_entrega
+        d['direccion_recogida'] = offer.direccion_recogida
+        d['direccion_entrega'] = offer.direccion_entrega
+        d['precio_hora'] = offer.precio_hora
+        d['tipo_vehiculo'] = offer.tipo_vehiculo
+        d['tipo_carga'] = offer.tipo_carga
+        d['permiso_conducir'] = offer.permiso_conducir
+        d['recorrido_km'] = offer.recorrido_km
+        d['metros'] = offer.metros
+        d['telefono_recogida'] = offer.telefono_recogida
+        d['telefono_entrega'] = offer.telefono_entrega
+        d['encoded_imagen_empresa'] = offer.encoded_imagen_empresa
+        rowarray_list.append(d)
+    j = json.dumps(rowarray_list)
+    resp = Response(j, status=200, mimetype='application/json')
+    resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
+    return resp
+
 
 
 if __name__ == '__main__':
