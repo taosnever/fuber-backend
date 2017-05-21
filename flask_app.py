@@ -1,5 +1,5 @@
 
-from flask import Flask, abort, request, jsonify, g, url_for, json
+from flask import Flask, abort, request, jsonify, g, url_for, json, render_template
 from socket import gethostname
 from flask import Response
 from flask_sqlalchemy import SQLAlchemy
@@ -54,7 +54,7 @@ class Offer(db.Model):
     metros = db.Column(db.String(12))
     telefono_recogida = db.Column(db.String(16))
     telefono_entrega = db.Column(db.String(16))
-    encoded_imagen_empresa = db.Column(db.String(2048))
+    encoded_imagen_empresa = db.Column(db.String(16000))
     asignada = db.Column(db.Boolean, default=False)
     realizada = db.Column(db.Boolean, default=False)
     user_id_asignado = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -94,7 +94,7 @@ class User(db.Model):
     puerta = db.Column(db.String(8))
     codigoPostal  = db.Column(db.String(8))
     disponibilidadGeo = db.Column(db.String(100))
-    imagen = db.Column(db.String(2048))
+    imagen = db.Column(db.String(16000))
     offers_pendientes = db.relationship('Offer', backref='offer')
     offers_realizadas = db.relationship('Offer', backref='offer_r')
     messages = db.relationship('Message', backref='message')
@@ -198,7 +198,13 @@ def get_resource():
 
 @app.route('/')
 def home():
-    return "Fuber is working baby"
+    return render_template('index.html')
+    #return "Fuber is working baby"
+
+@app.route('/index.html')
+def index():
+    return render_template('index.html')
+    #return "Fuber is working baby"
 ################################################################################Private Funcs
 
 
@@ -306,7 +312,12 @@ def create_user():
     user.hash_password(password)
     db.session.add(user)
     db.session.commit()
-    return (jsonify({'username': user.username}), 201)
+    if verify_password(username, password):
+        token = g.user.generate_auth_token(66600)
+        return (jsonify({'token': token.decode('ascii')}), 201)
+    #return (jsonify({'username': user.username}), 201)
+    return abort(400)
+
 
 
 
@@ -360,7 +371,7 @@ def get_info_users():
 @app.route('/users/<int:id>', methods=['GET'])
 def get_user_info(id):
     token = request.headers.get('token')
-    is_real = verify_password( token)
+    is_real = verify_token(token)
     if is_real:
         user = User.query.get(id)
         if not user:
@@ -408,11 +419,13 @@ def get_user_info(id):
 #informa si existe el usuario en la bd
 @app.route('/users/validate', methods=['GET'])
 def validate_user():
-    username=request.args.get('username')
-    mail=request.args.get('mail')
-    user = User.query.filter_by(username=username,mail=mail).first()
+    username_=request.args.get('username')
+    mail_=request.args.get('mail')
+    user = User.query.filter_by(username=username_).first()
     if not user:
-        (jsonify({'noexist': 'True'}), 200)
+        user = User.query.filter_by(mail=mail_).first()
+        if not user:
+            return (jsonify({'noexist': 'True'}), 200)
     return (jsonify({'noexist': 'False'}), 200)
 
 
@@ -420,45 +433,48 @@ def validate_user():
 #Update info del usuario con nueva info
 @app.route('/users/<int:id>', methods=['PUT'])
 def update_user(id):
-    user = User.query.get(id)
-    if not user:
-        abort(400)
-    user.username=request.form['username']
-    password=request.form['password']
-    user.nombre=request.form['nombre']
-    user.apellidos=request.form['apellidos']
-    user.dni=request.form['dni']
-    user.fecha=request.form['fecha']
-    user.mail=request.form['mail']
-    user.telefono=request.form['telefono']
-    user.cuenta=request.form['cuenta']
-    user.permisos=request.form['permisos']
-    user.vehiculo=request.form['vehiculo']
-    user.matricula=request.form['matricula']
-    user.marca=request.form['marca']
-    user.modelo=request.form['modelo']
-    user.tara=request.form['tara']
-    user.plataforma=request.form['plataforma']
-    user.carga=request.form['carga']
-    user.turnos=request.form['turnos']
-    user.dias=request.form['dias']
-    user.comunidad=request.form['comunidad']
-    user.provincia=request.form['provincia']
-    user.municipio=request.form['municipio']
-    user.tipoVia=request.form['tipoVia']
-    user.nombreVia=request.form['nombreVia']
-    user.numero=request.form['numero']
-    user.escalera=request.form['escalera']
-    user.piso=request.form['piso']
-    user.puerta=request.form['puerta']
-    user.codigoPostal=request.form['codigoPostal']
-    user.disponibilidadGeo=request.form['disponibilidadGeo']
-    user.imagen=request.form['imagen']
-    if not password:
-        user.hash_password(password)
-    db.session.commit()
-    return (jsonify({'username': user.username}), 200)
-
+    token = request.headers.get('token')
+    is_real = verify_token(token)
+    if is_real:
+        user = User.query.get(id)
+        if not user:
+            abort(400)
+        user.username=request.form['username']
+        password=request.form['password']
+        user.nombre=request.form['nombre']
+        user.apellidos=request.form['apellidos']
+        user.dni=request.form['dni']
+        user.fecha=request.form['fecha']
+        user.mail=request.form['mail']
+        user.telefono=request.form['telefono']
+        user.cuenta=request.form['cuenta']
+        user.permisos=request.form['permisos']
+        user.vehiculo=request.form['vehiculo']
+        user.matricula=request.form['matricula']
+        user.marca=request.form['marca']
+        user.modelo=request.form['modelo']
+        user.tara=request.form['tara']
+        user.plataforma=request.form['plataforma']
+        user.carga=request.form['carga']
+        user.turnos=request.form['turnos']
+        user.dias=request.form['dias']
+        user.comunidad=request.form['comunidad']
+        user.provincia=request.form['provincia']
+        user.municipio=request.form['municipio']
+        user.tipoVia=request.form['tipoVia']
+        user.nombreVia=request.form['nombreVia']
+        user.numero=request.form['numero']
+        user.escalera=request.form['escalera']
+        user.piso=request.form['piso']
+        user.puerta=request.form['puerta']
+        user.codigoPostal=request.form['codigoPostal']
+        user.disponibilidadGeo=request.form['disponibilidadGeo']
+        user.imagen=request.form['imagen']
+        if password:
+            user.hash_password(password)
+        db.session.commit()
+        return (jsonify({'username': user.username}), 200)
+    return abort(400)
 
 
 #login del usuario
@@ -567,11 +583,49 @@ def get_ofertas():
         d['telefono_recogida'] = offer.telefono_recogida
         d['telefono_entrega'] = offer.telefono_entrega
         d['encoded_imagen_empresa'] = offer.encoded_imagen_empresa
+        #d['asignada'] = offer.asignada
+        #d['realizada'] = offer.realizada
+        #d['user_id_asignado'] = offer.user_id_asignado
         rowarray_list.append(d)
     j = json.dumps(rowarray_list)
     resp = Response(j, status=200, mimetype='application/json')
     resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
     return resp
+
+
+
+@app.route('/ofertas/disponibles', methods=['GET'])
+def get_ofertas_disponibles():
+    offers = Offer.query.filter_by(asignada=False).all()
+    rowarray_list = []
+    for offer in offers:
+        d = collections.OrderedDict()
+        d['id'] = offer.id
+        d['nombre_empresa'] = offer.nombre_empresa
+        d['descripcion'] = offer.descripcion
+        d['fecha'] = offer.fecha
+        d['hora_recogida'] = offer.hora_recogida
+        d['hora_entrega'] = offer.hora_entrega
+        d['direccion_recogida'] = offer.direccion_recogida
+        d['direccion_entrega'] = offer.direccion_entrega
+        d['precio_hora'] = offer.precio_hora
+        d['tipo_vehiculo'] = offer.tipo_vehiculo
+        d['tipo_carga'] = offer.tipo_carga
+        d['permiso_conducir'] = offer.permiso_conducir
+        d['recorrido_km'] = offer.recorrido_km
+        d['metros'] = offer.metros
+        d['telefono_recogida'] = offer.telefono_recogida
+        d['telefono_entrega'] = offer.telefono_entrega
+        d['encoded_imagen_empresa'] = offer.encoded_imagen_empresa
+        #d['asignada'] = offer.asignada
+        #d['realizada'] = offer.realizada
+        #d['user_id_asignado'] = offer.user_id_asignado
+        rowarray_list.append(d)
+    j = json.dumps(rowarray_list)
+    resp = Response(j, status=200, mimetype='application/json')
+    resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
+    return resp
+
 
 
 
@@ -599,6 +653,9 @@ def get_ofertas_id(id):
     d['telefono_recogida'] = offer.telefono_recogida
     d['telefono_entrega'] = offer.telefono_entrega
     d['encoded_imagen_empresa'] = offer.encoded_imagen_empresa
+    #d['asignada'] = offer.asignada
+    #d['realizada'] = offer.realizada
+    #d['user_id_asignado'] = offer.user_id_asignado
     j = json.dumps(d)
     resp = Response(j, status=200, mimetype='application/json')
     resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
@@ -636,17 +693,20 @@ def upate_oferta_id(id):
 #user solicita empleo con oferta id
 @app.route('/ofertas/<int:id>/solicitar', methods=['PUT'])
 def solicitar_oferta_id(id):
-    user = User.query.get(request.form['user_id'])
-    if not user:
-        abort(400)
-    offer = Offer.query.get(id)
-    if not offer:
-        abort(400)
-    u = user.demand(offer)
-    db.session.add(u)
-    db.session.commit()
-    return (jsonify({'user_id':user.id,'oferta_id':offer.id}), 200)
-
+    token = request.headers.get('token')
+    is_real = verify_token(token)
+    if is_real:
+        user = User.query.get(request.form['user_id'])
+        if not user:
+            abort(400)
+        offer = Offer.query.get(id)
+        if not offer:
+            abort(400)
+        u = user.demand(offer)
+        db.session.add(u)
+        db.session.commit()
+        return (jsonify({'user_id':user.id,'oferta_id':offer.id}), 200)
+    return abort(400)
 
 
 #info o solo id, de todos los usuarios que quieran la oferta ofrecida
@@ -727,8 +787,8 @@ def finalizar_oferta(id):
         abort(400)
     offer.realizada = True
     db.session.commit()
-    user.offers_realizadas.append(offer)
     user.offers_pendientes.remove(offer)
+    user.offers_realizadas.append(offer)
     db.session.add(user)
     db.session.commit()
     return (jsonify({'user_id':user.id,'oferta_id':offer.id}), 200)
@@ -738,36 +798,40 @@ def finalizar_oferta(id):
 #info de las ofertas/pedidos que ha realizado dado su id
 @app.route('/users/<int:id>/realizadas', methods=['GET'])
 def get_user_realizadas(id):
-    user = User.query.get(id)
-    if not user:
-        abort(400)
-    offers = user.offers_realizadas
-    #print (offers)
-    rowarray_list = []
-    for offer in offers:
-        d = collections.OrderedDict()
-        d['nombre_empresa'] = offer.nombre_empresa
-        d['descripcion'] = offer.descripcion
-        d['fecha'] = offer.fecha
-        d['hora_recogida'] = offer.hora_recogida
-        d['hora_entrega'] = offer.hora_entrega
-        d['direccion_recogida'] = offer.direccion_recogida
-        d['direccion_entrega'] = offer.direccion_entrega
-        d['precio_hora'] = offer.precio_hora
-        d['tipo_vehiculo'] = offer.tipo_vehiculo
-        d['tipo_carga'] = offer.tipo_carga
-        d['permiso_conducir'] = offer.permiso_conducir
-        d['recorrido_km'] = offer.recorrido_km
-        d['metros'] = offer.metros
-        d['telefono_recogida'] = offer.telefono_recogida
-        d['telefono_entrega'] = offer.telefono_entrega
-        d['encoded_imagen_empresa'] = offer.encoded_imagen_empresa
-        rowarray_list.append(d)
-    j = json.dumps(rowarray_list)
-    resp = Response(j, status=200, mimetype='application/json')
-    resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
-    return resp
-
+    token = request.headers.get('token')
+    is_real = verify_token(token)
+    if is_real:
+        user = User.query.get(id)
+        if not user:
+            abort(400)
+        offers = user.offers_realizadas
+        #print (offers)
+        rowarray_list = []
+        for offer in offers:
+            d = collections.OrderedDict()
+            d['id'] = offer.id
+            d['nombre_empresa'] = offer.nombre_empresa
+            d['descripcion'] = offer.descripcion
+            d['fecha'] = offer.fecha
+            d['hora_recogida'] = offer.hora_recogida
+            d['hora_entrega'] = offer.hora_entrega
+            d['direccion_recogida'] = offer.direccion_recogida
+            d['direccion_entrega'] = offer.direccion_entrega
+            d['precio_hora'] = offer.precio_hora
+            d['tipo_vehiculo'] = offer.tipo_vehiculo
+            d['tipo_carga'] = offer.tipo_carga
+            d['permiso_conducir'] = offer.permiso_conducir
+            d['recorrido_km'] = offer.recorrido_km
+            d['metros'] = offer.metros
+            d['telefono_recogida'] = offer.telefono_recogida
+            d['telefono_entrega'] = offer.telefono_entrega
+            d['encoded_imagen_empresa'] = offer.encoded_imagen_empresa
+            rowarray_list.append(d)
+        j = json.dumps(rowarray_list)
+        resp = Response(j, status=200, mimetype='application/json')
+        resp.headers['Link'] = 'http://fuber.pythonanywhere.com'
+        return resp
+    return abort(400)
 
 
 #info de las ofertas/pedidos que  tiene pendientes dado su id
@@ -781,6 +845,7 @@ def get_user_pendientes(id):
     rowarray_list = []
     for offer in offers:
         d = collections.OrderedDict()
+        d['id'] = offer.id
         d['nombre_empresa'] = offer.nombre_empresa
         d['descripcion'] = offer.descripcion
         d['fecha'] = offer.fecha
@@ -807,9 +872,9 @@ def get_user_pendientes(id):
 
 #Return user.id by token
 @app.route('/me', methods=['GET'])
-def get_user_me(id):
+def get_user_me():
     token = request.headers.get('token')
-    is_real = verify_password( token)
+    is_real = verify_token(token)
     if is_real:
         return (jsonify({'user_id':g.user.id}), 200)
     return abort(400)
@@ -819,10 +884,15 @@ def get_user_me(id):
 #enviar mensaje a fuber
 @app.route('/users/<int:id>/mensajes', methods=['POST'])
 def mensaje_to_fuber(id):
-    user = User.query.get(id)
+    type_ = request.form['type']
+    if type_ == 1:
+        token = request.headers.get('token')
+        is_real = verify_token(token)
+        if is_real:
+            user = User.query.get(id)
+    else: user = User.query.get(id)
     if not user:
         abort(400)
-    type_ = request.form['type']
     text_ = request.form['text']
     date_ = request.form['date']
     time_ = request.form['time']
@@ -834,14 +904,14 @@ def mensaje_to_fuber(id):
                     user_id_message=user.id)
     db.session.add(message)
     db.session.commit()
-    user.messages(message)
+    user.messages.append(message)
     db.session.commit()
-    return (jsonify({'user_id':user.id}), 200)
+    return (jsonify({'message.id':message.id}), 200)
 
 
 
 #info de todos los mensajes de fuber con usuario by id
-@app.route('/users/<int:id>/mensajes', methods=['GEt'])
+@app.route('/users/<int:id>/mensajes', methods=['GET'])
 def get_mansajes_id(id):
     user = User.query.get(id)
     if not user:
@@ -850,12 +920,12 @@ def get_mansajes_id(id):
     rowarray_list = []
     for mess in messages:
         d = collections.OrderedDict()
-        d['id'] = mess.id
+        #d['id'] = mess.id
         d['type'] = mess.type
         d['text'] = mess.text
         d['date'] = mess.date
         d['time'] = mess.time
-        d['user_id_message'] = mess.user_id_message
+        #d['user_id_message'] = mess.user_id_message
         rowarray_list.append(d)
     j = json.dumps(rowarray_list)
     resp = Response(j, status=200, mimetype='application/json')
