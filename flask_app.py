@@ -935,6 +935,34 @@ def get_mansajes_id(id):
 
 
 
+#DELETE user
+@app.route('/users/<int:id>', methods=['DELETE'])
+def delete_user_id(id):
+    token = request.headers.get('token')
+    is_real = verify_token(token)
+    if is_real:
+        user = User.query.get(id)
+        if not user:
+            abort(400)
+        db.session.delete(user)
+        db.session.commit()
+        return (jsonify({'delete':True}), 200)
+
+
+
+#DELETE oferta
+@app.route('/ofertas/<int:id>', methods=['DELETE'])
+def delete_offer_id(id):
+    offer = Offer.query.get(id)
+    if not offer:
+        abort(400)
+    db.session.delete(offer)
+    db.session.commit()
+    return (jsonify({'delete':True}), 200)
+
+
+
+
 if __name__ == '__main__':
     db.create_all()
     if 'liveconsole' not in gethostname():
