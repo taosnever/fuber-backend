@@ -540,3 +540,26 @@
 + **Error:**
     + 400 is user not exist
 
+
+##### DELETE user
+##### route(```'/users/<int:id>'```, methods=[```'DELETE'```])
++ **Headers accepted parameters (if type is 1):**
+    + token
++ **Path accepted param:**
+    + id
++ **Return:**
+    + (json({'delete':True}), 200)
++ **Error:**
+    + 400 is user not exist
+
+
+
+##### **DELETE offer**
+##### route(```'/ofertas/<int:id>'```, methods=[```'DELETE'```])
++ **Path accepted param:**
+    + id
++ **Return:**
+    + (json({'delete':True}), 200)
++ **Error:**
+    + 400 is offer not exist
+
