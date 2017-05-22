@@ -1,6 +1,6 @@
 **API  FUBER**
 ---
----
+
 **URL base:** http://fuber.pythonanywhere.com
 
 
@@ -11,7 +11,7 @@
 
 
 
-##### CREATE new user
+#### CREATE new user
 ##### route(```'/users'```, methods=[```'POST'```])
 + **Form-data accepted parameters:**
     + username
@@ -50,7 +50,7 @@
     + 400 missing arguments or user exist
 
 
-##### ALL users from db
+#### ALL users from db
 ##### route(```'/users'```, methods=[```'GET'```])
 + **Return List of users. FIELDS:**
     + id
@@ -90,7 +90,7 @@
 
 
 
-##### USER by id
+#### USER by id
 ##### route(```'/users/<int:id>'```, methods=[```'GET'```])
 + **Headers accepted parameters:**
     + token
@@ -137,7 +137,7 @@
 
 
 
-##### Validate the existence of a user
+#### Validate the existence of a user
 ##### route(```'/users/validate'```, methods=[```'GET'```)
 + **Query-param accepted:**
     + username
@@ -150,7 +150,7 @@
 
 
 
-##### UPDATE user
+#### UPDATE user
 ##### route(```'/users/<int:id>'```, methods=[```'PUT'```])
 + **Headers accepted parameters:**
     + token
@@ -195,7 +195,7 @@
 
 
 
-##### LOGIN
+#### LOGIN
 ##### route('```/login```', methods=[```'POST'```])
 + **Form-data accepted parameters:**
     + username
@@ -207,14 +207,14 @@
 
 
 
-##### DROP database
+#### DROP database
 ##### route(```'/cleardatabase'```, methods=[```'GET'```])
 + **Return:**
     + json.dumps({'success':True}), 200, {'ContentType':'application/json'}
 
 
 
-##### CREATE new offer
+#### CREATE new offer
 ##### route(```'/ofertas'```, methods=[```'POST'```])
 + **FORM parameters:**
     + nombre_empresa
@@ -240,7 +240,7 @@
 
 
 
-##### ALL offers from db
+#### ALL offers from db
 ##### route(```'/ofertas'```, methods=[```'GET'```])
 + **Return list ofertas. FILEDS:**
     + id
@@ -266,7 +266,7 @@
 
 
 
-##### ALL offers available
+#### ALL offers available
 ##### route(```'/ofertas/disponibles'```, methods=[```'GET'```])
 + **Return list of offers. FILEDS:**
     + id
@@ -292,7 +292,7 @@
 
 
 
-##### Offer by id
+#### Offer by id
 ##### route(```'/ofertas/<int:id>'```, methods=[```'GET'```])
 + **Path accepted param:**
     + id
@@ -322,7 +322,7 @@
 
 
 
-##### UPDATE offer by id
+#### UPDATE offer by id
 ##### route(```'/ofertas/<int:id>'```, methods=[```'PUT'```])
 + **Path accepted param:**
     + id
@@ -350,7 +350,7 @@
 
 
 
-##### REQUEST offer by user
+#### REQUEST offer by user
 ##### route(```'/ofertas/<int:id>/solicitar'```, methods=[```'PUT'```])
 + **Headers accepted parameters:**
     + token
@@ -365,7 +365,7 @@
 
 
 
-##### USERS who requested offer
+#### USERS who requested offer
 ##### route(```'/ofertas/<int:id>/solicitar'```, methods=[```'GET'```])
 + **Return List of users FIELDS:**
     + id
@@ -407,7 +407,7 @@
 
 
 
-##### ASSIGN offer to user
+#### ASSIGN offer to user
 ##### route(```'/ofertas/<int:id>/pendientes'```, methods=[```'PUT'```])
 + **Path accepted param:**
     + id
@@ -420,7 +420,7 @@
 
 
 
-#@### MARK FULFILLED offer
+#### MARK FULFILLED offer
 ##### route(```'/ofertas/<int:id>/realizadas'```, methods=[```'PUT'```])
 + **Path accepted param:**
     + id
@@ -433,7 +433,7 @@
 
 
 
-##### ALL offers fulfilled by user id
+#### ALL offers fulfilled by user id
 ##### route(```'/users/<int:id>/realizadas'```, methods=[```'GET'```])
 + **Headers accepted parameters:**
     + token
@@ -465,7 +465,7 @@
 
 
 
-##### ALL offers pendings by user id
+#### ALL offers pendings by user id
 ##### route(```'/users/<int:id>/pendientes'```, methods=[```'GET'```])
 + **Path accepted param:**
     + id
@@ -495,7 +495,7 @@
 
 
 
-##### USER by token
+#### USER by token
 ##### route(```'/me'```, methods=[```'GET'```])
 + **Headers accepted parameters:**
     + token
@@ -507,7 +507,7 @@
 
 
 
-##### SEND message to fuber
+#### SEND message to fuber
 ##### route(```'/users/<int:id>/mensajes'```, methods=[```'POST'```])
 + **Headers accepted parameters (if type is 1):**
     + token
@@ -525,7 +525,7 @@
 
 
 
-##### ALL messages from db
+#### ALL messages from db
 ##### route(```'/users/<int:id>/mensajes'```, methods=[```'GET'```])
 + **Path accepted param:**
     + id
