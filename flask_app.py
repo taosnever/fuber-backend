@@ -58,6 +58,7 @@ class Offer(db.Model):
     asignada = db.Column(db.Boolean, default=False)
     realizada = db.Column(db.Boolean, default=False)
     user_id_asignado = db.Column(db.Integer, db.ForeignKey('users.id'))
+    user_id_realizado = db.Column(db.Integer, db.ForeignKey('users.id'))
 
 ################################################################################TABLE users
 ################################################################################USER MODEL
@@ -95,8 +96,8 @@ class User(db.Model):
     codigoPostal  = db.Column(db.String(8))
     disponibilidadGeo = db.Column(db.String(100))
     imagen = db.Column(db.String(16000))
-    offers_pendientes = db.relationship('Offer', backref='offer')
-    offers_realizadas = db.relationship('Offer', backref='offer_r')
+    offers_pendientes = db.relationship('Offer', backref='offer', primaryjoin = "Offer.user_id_asignado == User.id")
+    offers_realizadas = db.relationship('Offer', backref='offer_r', primaryjoin = "Offer.user_id_realizado == User.id")
     messages = db.relationship('Message', backref='message')
     demanded = db.relationship('Offer',
                             secondary=demands,
