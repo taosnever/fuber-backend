@@ -541,7 +541,7 @@
     + 400 is user not exist
 
 
-##### DELETE user
+#### DELETE user
 ##### route(```'/users/<int:id>'```, methods=[```'DELETE'```])
 + **Headers accepted parameters (if type is 1):**
     + token
@@ -554,7 +554,7 @@
 
 
 
-##### **DELETE offer**
+#### **DELETE offer**
 ##### route(```'/ofertas/<int:id>'```, methods=[```'DELETE'```])
 + **Path accepted param:**
     + id
