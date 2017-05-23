@@ -8,16 +8,29 @@ from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
 import collections
 
-#init
+#
+# SQLinit
+#
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'fuber iswill be the star'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 
-#extension
+
+
+##
+##  Extension
+##
+
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
 
+
+
+##
+##  Help Table
+##
 
 demands = db.Table('demands',
         db.Column('user_id', db.Integer, db.ForeignKey('users.id'), nullable=False),
@@ -26,6 +39,12 @@ demands = db.Table('demands',
 )
 
 
+
+##
+##  Models
+##
+
+# Message Model
 class Message(db.Model):
     __tablename__ = 'messages'
     id = db.Column(db.Integer, primary_key=True)
@@ -35,7 +54,7 @@ class Message(db.Model):
     time  = db.Column(db.String(512))
     user_id_message = db.Column(db.Integer, db.ForeignKey('users.id'))
 
-
+# OFFER Mdel
 class Offer(db.Model):
     __tablename__ = 'offers'
     id = db.Column(db.Integer, primary_key=True)
@@ -60,8 +79,8 @@ class Offer(db.Model):
     user_id_asignado = db.Column(db.Integer, db.ForeignKey('users.id'))
     user_id_realizado = db.Column(db.Integer, db.ForeignKey('users.id'))
 
-################################################################################TABLE users
-################################################################################USER MODEL
+
+# USER Mdel
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -140,10 +159,21 @@ class User(db.Model):
         user = User.query.get(data['id'])
         return user
 
-################################################################################CREATE DATABASE
+
+
+##
+##  Create DB
+##
+
 db.create_all()
 
-##API based
+
+
+##
+##  Internal API
+##
+
+#VERIFY usename or password
 @auth.verify_password
 def verify_password(username_or_token, password):
     # first try to authenticate by token
@@ -156,6 +186,8 @@ def verify_password(username_or_token, password):
     g.user = user
     return True
 
+
+#VERIRFY token
 def verify_token(token):
     # first try to authenticate by token
     user = User.verify_auth_token(token)
@@ -164,6 +196,8 @@ def verify_token(token):
     g.user = user
     return True
 
+
+#test1
 @app.route('/api/users', methods=['POST'])
 def new_user():
     username = request.json.get('username')
@@ -179,6 +213,8 @@ def new_user():
     return (jsonify({'username': user.username}), 201,
             {'Location': url_for('get_user', id=user.id, _external=True)})
 
+
+#test2
 @app.route('/api/users/<int:id>')
 def get_user(id):
     user = User.query.get(id)
@@ -186,34 +222,48 @@ def get_user(id):
         abort(400)
     return jsonify({'username': user.username})
 
+
+#test3
 @app.route('/api/token')
 @auth.login_required
 def get_auth_token():
     token = g.user.generate_auth_token(600)
     return jsonify({'token': token.decode('ascii')})
 
+
+#test4
 @app.route('/api/resource')
 @auth.login_required
 def get_resource():
     return jsonify({'data': 'Hello, %s!' % g.user.username})
 
+
+
+##
+##  Routes
+##
+
+# Home
 @app.route('/')
 def home():
     return render_template('index.html')
     #return "Fuber is working baby"
 
+
+# Home
 @app.route('/index.html')
 def index():
     return render_template('index.html')
     #return "Fuber is working baby"
-################################################################################Private Funcs
+
+##
+##  FUBER API
+##
 
 
-################################################################################FUBER API
+##   User
 
-#User
-
-#Create un nuevo usuario
+# CREATE new user
 @app.route('/users', methods=['POST'])
 def create_user():
     """Witf form"""
@@ -322,7 +372,7 @@ def create_user():
 
 
 
-#info de todos los usuarios
+# ALL users from db
 @app.route('/users', methods=['GET'])
 def get_info_users():
     users = User.query.all()
@@ -368,7 +418,7 @@ def get_info_users():
 
 
 
-#info de un usuario by
+# USER by id
 @app.route('/users/<int:id>', methods=['GET'])
 def get_user_info(id):
     token = request.headers.get('token')
@@ -417,7 +467,7 @@ def get_user_info(id):
 
 
 
-#informa si existe el usuario en la bd
+# Validate the existence of a user in db
 @app.route('/users/validate', methods=['GET'])
 def validate_user():
     username_=request.args.get('username')
@@ -431,7 +481,7 @@ def validate_user():
 
 
 
-#Update info del usuario con nueva info
+# UPDATE user
 @app.route('/users/<int:id>', methods=['PUT'])
 def update_user(id):
     token = request.headers.get('token')
@@ -478,7 +528,7 @@ def update_user(id):
     return abort(400)
 
 
-#login del usuario
+# LOGIN
 @app.route('/login', methods=['POST'])
 def login_get_auth_token():
     username=request.form['username']
@@ -490,7 +540,7 @@ def login_get_auth_token():
 
 
 
-#Clear Database
+# DROP database
 @app.route('/cleardatabase', methods=['GET'])
 def clear_db():
     db.session.commit()
@@ -501,7 +551,9 @@ def clear_db():
 
 
 
-#crea una oferta
+##   Offer
+
+# CREATE new offer
 @app.route('/ofertas', methods=['POST'])
 def create_oferta():
     nombre_empresa = request.form['nombre_empresa']
@@ -561,6 +613,7 @@ def create_oferta():
 
 
 
+# ALL offers from db
 @app.route('/ofertas', methods=['GET'])
 def get_ofertas():
     offers = Offer.query.all()
@@ -595,6 +648,7 @@ def get_ofertas():
 
 
 
+# ALL offers available
 @app.route('/ofertas/disponibles', methods=['GET'])
 def get_ofertas_disponibles():
     offers = Offer.query.filter_by(asignada=False).all()
@@ -629,7 +683,7 @@ def get_ofertas_disponibles():
 
 
 
-
+# OFFER by id
 #info de una oferta by id
 @app.route('/ofertas/<int:id>', methods=['GET'])
 def get_ofertas_id(id):
@@ -664,7 +718,7 @@ def get_ofertas_id(id):
 
 
 
-#Update la oferta by id
+# UPDATE offer by id
 @app.route('/ofertas/<int:id>', methods=['PUT'])
 def upate_oferta_id(id):
     offer = Offer.query.get(id)
@@ -691,7 +745,7 @@ def upate_oferta_id(id):
 
 
 
-#user solicita empleo con oferta id
+# UPDATE offer by id
 @app.route('/ofertas/<int:id>/solicitar', methods=['PUT'])
 def solicitar_oferta_id(id):
     token = request.headers.get('token')
@@ -710,7 +764,8 @@ def solicitar_oferta_id(id):
     return abort(400)
 
 
-#info o solo id, de todos los usuarios que quieran la oferta ofrecida
+
+# USERS who requested offer
 @app.route('/ofertas/<int:id>/solicitar', methods=['GET'])
 def solicitar_info_oferta_id(id):
     offer = Offer.query.get(id)
@@ -759,7 +814,7 @@ def solicitar_info_oferta_id(id):
 
 
 
-#oferta asignada. asigna oferta(id) a user_id
+# ASSIGN offer to user id
 @app.route('/ofertas/<int:id>/pendientes', methods=['PUT'])
 def asignar_oferta(id):
     user = User.query.get(request.form['user_id'])
@@ -777,7 +832,7 @@ def asignar_oferta(id):
 
 
 
-#oferta realizada. Marca como realizada una oferta(id) por un user_is
+# MARK FULFILLED offer
 @app.route('/ofertas/<int:id>/realizadas', methods=['PUT'])
 def finalizar_oferta(id):
     user = User.query.get(request.form['user_id'])
@@ -796,7 +851,7 @@ def finalizar_oferta(id):
 
 
 
-#info de las ofertas/pedidos que ha realizado dado su id
+# ALL offers fulfilled by user id
 @app.route('/users/<int:id>/realizadas', methods=['GET'])
 def get_user_realizadas(id):
     token = request.headers.get('token')
@@ -835,7 +890,7 @@ def get_user_realizadas(id):
     return abort(400)
 
 
-#info de las ofertas/pedidos que  tiene pendientes dado su id
+# ALL offers pendings by user id
 @app.route('/users/<int:id>/pendientes', methods=['GET'])
 def get_user_pendientes(id):
     user = User.query.get(id)
@@ -871,7 +926,7 @@ def get_user_pendientes(id):
 
 
 
-#Return user.id by token
+# USER by token
 @app.route('/me', methods=['GET'])
 def get_user_me():
     token = request.headers.get('token')
@@ -882,7 +937,7 @@ def get_user_me():
 
 
 
-#enviar mensaje a fuber
+# SEND message to fuber
 @app.route('/users/<int:id>/mensajes', methods=['POST'])
 def mensaje_to_fuber(id):
     type_ = request.form['type']
@@ -911,7 +966,7 @@ def mensaje_to_fuber(id):
 
 
 
-#info de todos los mensajes de fuber con usuario by id
+# ALL messages from db
 @app.route('/users/<int:id>/mensajes', methods=['GET'])
 def get_mansajes_id(id):
     user = User.query.get(id)
@@ -935,7 +990,7 @@ def get_mansajes_id(id):
 
 
 
-#DELETE user
+# DELETE user
 @app.route('/users/<int:id>', methods=['DELETE'])
 def delete_user_id(id):
     token = request.headers.get('token')
@@ -950,7 +1005,7 @@ def delete_user_id(id):
 
 
 
-#DELETE oferta
+# DELETE offer
 @app.route('/ofertas/<int:id>', methods=['DELETE'])
 def delete_offer_id(id):
     offer = Offer.query.get(id)
