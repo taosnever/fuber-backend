@@ -990,6 +990,8 @@ def get_mansajes_id(id):
 
 
 
+##   Deletes
+
 # DELETE user
 @app.route('/users/<int:id>', methods=['DELETE'])
 def delete_user_id(id):
@@ -1014,6 +1016,7 @@ def delete_offer_id(id):
     db.session.delete(offer)
     db.session.commit()
     return (jsonify({'delete':True}), 200)
+
 
 
 
